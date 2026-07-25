@@ -8,6 +8,8 @@
 
 - 使用开源的 [ComfyUI](https://github.com/Comfy-Org/ComfyUI) 作为后端，通过原生工作流 API 支持文生图、图生图、LoRA、模型管理与任务队列
 
+- 默认将中文提示词原样发送给支持中文的文本编码器；旧模型可用 `#开启中文Prompt翻译` 恢复自动翻译
+
 - **使用中遇到问题请加 QQ 群咨询：[707331865](https://qm.qq.com/q/TXTIS9KhO2)**
 
 > [!TIP]

@@ -109,6 +109,11 @@ export class setSetting extends plugin {
           fnc: "setMatchLora",
           /** 主人权限 */
           permission: "master",
+        },
+        {
+          reg: "^#?(开启|关闭)中文(Prompt|提示词)翻译$",
+          fnc: "setPromptTranslation",
+          permission: "master",
         }
       ],
     });
@@ -120,6 +125,17 @@ export class setSetting extends plugin {
     setting.matchLora = matchLora;
     Config.setSetting(setting);
     e.reply(`${matchLora ? "已开启" : "已关闭"}自动匹配Lora`);
+    return true;
+  }
+
+  async setPromptTranslation(e) {
+    const setting = await Config.getSetting();
+    const enabled = e.msg.includes("开启");
+    setting.translate_chinese_prompt = enabled;
+    await Config.setSetting(setting);
+    e.reply(enabled
+      ? "已开启中文Prompt自动翻译（仅建议旧模型使用）"
+      : "已关闭中文Prompt自动翻译，中文将原样发送给ComfyUI");
     return true;
   }
 
