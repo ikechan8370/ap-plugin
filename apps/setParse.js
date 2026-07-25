@@ -4,7 +4,10 @@ import YAML from "yaml";
 import cfg from "../../../lib/config/config.js";
 import Config from '../components/ai_painting/config.js';
 import Log from '../utils/Log.js';
-import axios from "axios";
+import {
+  listSamplers,
+  listUpscalers,
+} from "../components/ai_painting/comfyui.js";
 
 const parsePath = process.cwd() + "\/plugins\/ap-plugin\/config\/config\/parse.yaml";
 
@@ -272,55 +275,24 @@ async function initialization(e) {
 }
 
 async function getSamplers() {
-  let config = await Config.getcfg()
-  let apiobj = config.APIList[config.usingAPI - 1]
-  let url = apiobj.url + '/sdapi/v1/samplers';
-  const headers = {
-    "Content-Type": "application/json"
-  };
-  if (apiobj.account_password) {
-    headers.Authorization = `Basic ${Buffer.from(apiobj.account_id + ':' + apiobj.account_password, 'utf8').toString('base64')} `,
-    headers.User_Agent = `AP-Plugin`
-  }
   try {
-    let res = await axios.get(url, {
-      headers: headers
-    });
-    res = res.data
-    let samplerlist = []
-    for (let i = 0; i < res.length; i++) {
-      samplerlist.push(res[i].name)
-    }
-    return samplerlist
+    const config = await Config.getcfg()
+    const apiobj = config.APIList[config.usingAPI - 1]
+    return (await listSamplers(apiobj)).map((item) => item.name)
   } catch (err) {
-    Log.w("获取采样器列表失败，使用默认采样器列表", err)
-    return ['Euler a', 'Euler', 'PLMS', 'LMS Karras', 'LMS', 'Heun', 'DPM fast', 'DPM adaptive', 'DPM2 Karras', 'DPM2 a Karras', 'DPM2 a', 'DPM2', 'DDIM', 'DPM++ 2S a Karras', 'DPM++ 2S a', 'DPM++ 2M Karras', 'DPM++ 2M', 'DPM++ SDE Karras', 'DPM++ SDE', 'UniPC'];
+    Log.w("获取ComfyUI采样器列表失败", err)
+    return ['euler', 'euler_ancestral', 'dpmpp_2m', 'dpmpp_sde']
   }
 }
 
 async function getUpscalers() {
-  let config = await Config.getcfg()
-  let apiobj = config.APIList[config.usingAPI - 1]
-  let url = apiobj.url + '/sdapi/v1/upscalers';
-  const headers = {
-    "Content-Type": "application/json"
-  };
-  if (apiobj.account_password) {
-    headers.Authorization = `Basic ${Buffer.from(apiobj.account_id + ':' + apiobj.account_password, 'utf8').toString('base64')} `
-    headers.User_Agent = `AP-Plugin`
-  }
   try {
-    let res = await axios.get(url, {
-      headers: headers
-    });
-    res = res.data
-    let upscalerlist = []
-    for (let i = 0; i < res.length; i++) {
-      upscalerlist.push(res[i].name)
-    }
-    return upscalerlist
+    const config = await Config.getcfg()
+    const apiobj = config.APIList[config.usingAPI - 1]
+    const names = (await listUpscalers(apiobj)).map((item) => item.name)
+    return names.length ? names : ['Lanczos']
   } catch (err) {
-    Log.w("获取放大算法列表失败，使用默认列表", err)
-    return ['Latent', 'Latent (antialiased)', 'Latent (bicubic)', 'Latent (bicubic antialiased)', 'Latent (nearest)', 'Latent (nearest-exact)', '无', 'Lanczos', '最邻近(整数缩放)', 'BSRGAN', 'ESRGAN_4x', 'LDSR', 'R-ESRGAN 4x+', 'R-ESRGAN 4x+ Anime6B', 'SwinIR_4x'];
+    Log.w("获取ComfyUI放大模型列表失败", err)
+    return ['Lanczos']
   }
 }

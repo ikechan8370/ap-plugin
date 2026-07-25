@@ -6,7 +6,7 @@
 
 - 一个适用于 [Yunzai 系列机器人框架](https://github.com/yhArcadia/Yunzai-Bot-plugins-index) 的的 AI 绘图插件，让你在输入框中拥有便捷的 AI 绘画体验
 
-- 使用开源的 [Stable Diffusion web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) 作为后端，自己免费部署，生成的图片多样化，功能更加丰富
+- 使用开源的 [ComfyUI](https://github.com/Comfy-Org/ComfyUI) 作为后端，通过原生工作流 API 支持文生图、图生图、LoRA、模型管理与任务队列
 
 - **使用中遇到问题请加 QQ 群咨询：[707331865](https://qm.qq.com/q/TXTIS9KhO2)**
 
@@ -39,7 +39,7 @@ pnpm install --filter=ap-plugin
 > [!WARNING]
 > 非常不建议手动修改配置文件，本插件已兼容 [Guoba-plugin](https://github.com/guoba-yunzai/guoba-plugin) ，请使用锅巴插件对配置项进行修改
 
-- 关于部署 Stable Diffuison，请自行在网上寻找教程，这里放一个 [秋葉 aaaki 的教程](https://www.bilibili.com/video/BV1iM4y1y7oA)
+- 关于部署 ComfyUI，请参考 ComfyUI 官方文档。默认工作流适配 Krea 2 独立 UNet、CLIP 与 VAE，也可通过接口配置选择后端已安装的模型
 
 - 关于部署 HuggingFace 平台的相关功能，本插件作者不再维护这些功能，请自行寻找教程
 
@@ -53,7 +53,7 @@ pnpm install --filter=ap-plugin
 - [x] 二次元的我
 - [x] 鉴赏解析图片 Tags
 - [x] 局部重绘
-- [x] 控制网基础（需要后端安装 ControlNet）
+- [ ] 控制网工作流（当前会检测 ComfyUI ControlNet 模型并给出能力提示）
 - [x] 使用 Embedding 和 Lora
 - [x] 图片存本地
 - [x] 本地预设功能
@@ -72,7 +72,7 @@ pnpm install --filter=ap-plugin
    - 建议使用 NVIDIA GeForce GTX 1660 以上的独立显卡，没有独立显卡的电脑不推荐部署。
 2. 为什么我部署了，网页端正常画，插件使用不了？
    - 请检查你的后端服务器能被机器人服务器访问。
-   - 请在启动器中打开 `启用API` 选项，或在启动参数中加入 `--api`。
+   - 请确保 ComfyUI 使用 `--listen` 对机器人所在网络开放，并允许访问 `/prompt`、`/history`、`/view` 和 `/upload/image`。
 
 ## 支持与贡献
 
@@ -82,8 +82,8 @@ pnpm install --filter=ap-plugin
 
 ## 相关项目
 
-- [Stable Diffusion web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui)：Stable Diffusion web UI
-- [ControlNet](https://github.com/lllyasviel/ControlNet): Let us control diffusion models!
+- [ComfyUI](https://github.com/Comfy-Org/ComfyUI)：节点式生成式 AI 后端
+- [ControlNet](https://github.com/lllyasviel/ControlNet)：条件控制模型
 
 ## 许可证
 

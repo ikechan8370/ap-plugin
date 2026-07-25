@@ -14,7 +14,11 @@ import { parseImg } from '../utils/utils.js';
 import cfg from "../../../lib/config/config.js";
 import puppeteer from '../../../lib/puppeteer/puppeteer.js'
 import Config from '../components/ai_painting/config.js';
-import axios from 'axios';
+import {
+    interrupt as interruptComfyUI,
+    queueStatus,
+    testConnection,
+} from '../components/ai_painting/comfyui.js';
 
 const _path = process.cwd();
 
@@ -170,31 +174,22 @@ export class Tools extends plugin {
             return true
         }
         let msg = '共有' + apcfg.APIList.length + '个接口'
-        let res = await Promise.all(apcfg.APIList.map(async (item) => {
-            let res = await axios.get(item.url, { timeout: 5000 }).catch(() => { })
-            return res
+        const states = await Promise.all(apcfg.APIList.map(async (item) => {
+            try {
+                await testConnection(item)
+                return await queueStatus(item)
+            } catch {
+                return null
+            }
         }))
-        for (let i = 0; i < res.length; i++) {
-            if (res[i]) {
-                let header = {}
-                if (apcfg.APIList[i].account_id && apcfg.APIList[i].account_password) {
-                    header = {
-                        'Authorization': 'Basic ' + Buffer.from(`${apcfg.APIList[i].account_id}:${apcfg.APIList[i].account_password}`).toString('base64'),
-                        'User-Agent': `AP-Plugin`
-                    }
-                }
-                let progress = await axios.get(`${apcfg.APIList[i].url}/sdapi/v1/progress`, { headers: header, timeout: 5000 }).catch(() => { })
-                if (progress) {
-                    if (progress.data.eta_relative == '0') {
-                        msg += `\n✅接口${i + 1}[${res[i].status}]：${apcfg.APIList[i].remark} 服务器很寂寞...`
-                    } else {
-                        msg += `\n✅接口${i + 1}[${res[i].status}]：${apcfg.APIList[i].remark} [${(progress.data.progress * 100).toFixed(0)}%]预计剩余${(progress.data.eta_relative).toFixed(2)}秒完成`
-                    }
-                } else {
-                    msg += `\n✅接口${i + 1}[${res[i].status}]：${apcfg.APIList[i].remark} 未能获取进度`
-                }
+        for (let i = 0; i < states.length; i++) {
+            const state = states[i]
+            if (!state) {
+                msg += `\n🚫接口${i + 1}[不可用]：${apcfg.APIList[i].remark}`
+            } else if (state.running || state.pending) {
+                msg += `\n✅接口${i + 1}：${apcfg.APIList[i].remark} 运行中${state.running}，排队${state.pending}`
             } else {
-                msg += `\n🚫接口${i + 1}[超时]：${apcfg.APIList[i].remark}`
+                msg += `\n✅接口${i + 1}：${apcfg.APIList[i].remark} 当前空闲`
             }
         }
         e.reply(msg)
@@ -214,21 +209,9 @@ export class Tools extends plugin {
         } else {
             num = apcfg.usingAPI - 1
         }
-        let url = apcfg.APIList[num].url + '/sdapi/v1/interrupt'
-        let header = {}
-        if (apcfg.APIList[num].account_id && apcfg.APIList[num].account_password) {
-            header = {
-                'Authorization': 'Basic ' + Buffer.from(`${apcfg.APIList[num].account_id}:${apcfg.APIList[num].account_password}`).toString('base64'),
-                'User-Agent': `AP-Plugin`
-            }
-        }
         try {
-            let res = await axios.post(url, { headers: header, timeout: 5000 })
-            if (res) {
-                e.reply(`接口${num + 1}：${apcfg.APIList[num].remark}已取消当前绘制任务`)
-            } else {
-                e.reply(`接口${num + 1}：${apcfg.APIList[num].remark}取消任务失败`)
-            }
+            await interruptComfyUI(apcfg.APIList[num])
+            e.reply(`接口${num + 1}：${apcfg.APIList[num].remark}已请求中止当前绘制任务`)
         } catch (err) {
             e.reply(`接口${num + 1}：${apcfg.APIList[num].remark}取消任务失败`)
         }

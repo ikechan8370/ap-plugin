@@ -9,11 +9,11 @@
  * Copyright (c) 2023 by 渔火Arcadia 1761869682@qq.com, All Rights Reserved.
  */
 import plugin from "../../../lib/plugins/plugin.js";
-import axios from "axios";
 import Config from "../components/ai_painting/config.js";
 import Log from "../utils/Log.js";
 import { chNum2Num } from "../utils/utils.js";
 import puppeteer from "../../../lib/puppeteer/puppeteer.js";
+import { listLoras } from "../components/ai_painting/comfyui.js";
 
 const _path = process.cwd();
 
@@ -54,10 +54,7 @@ export class GetLora extends plugin {
       await redis.set(`Yz:AiPainting:LoraList`, JSON.stringify(response.data));
     } catch (err) {
       Log.e(err);
-      if (err.response.data.detail == "Not Found") {
-        return e.reply(`接口${index}：${apiobj.remark} ：没有可用的Lora接口`);
-      }
-      return e.reply("拉取失败");
+      return e.reply(`接口${index}：${apiobj.remark}：拉取LoRA列表失败`);
     }
     if (response.status != 200) {
       return e.reply("拉取失败");
@@ -156,21 +153,6 @@ export class GetLora extends plugin {
   }
 }
 export async function _(BIh1) {
-  let API = BIh1.url;
-  if (!API.endsWith("/")) {
-    API += "/";
-  }
-  const options = {
-    headers: {
-      accept: "application/json",
-    },
-  };
-  if (BIh1.account_password && BIh1.account_id) {
-    options.headers.Authorization = `Basic ${Buffer.from(
-      BIh1.account_id + ":" + BIh1.account_password,
-      "utf8",
-    ).toString("base64")}`;
-    options.headers["User-Agent"] = "AP-Plugin";
-  }
-  return await axios.get(API + "sdapi/v1/loras", options);
+  const data = await listLoras(BIh1);
+  return { status: 200, data };
 }

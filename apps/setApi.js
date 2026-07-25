@@ -14,6 +14,11 @@ import Log from '../utils/Log.js';
 import axios from 'axios';
 import fetch from 'node-fetch';
 import translate from '../utils/translate.js';
+import {
+	discover,
+	listSamplers,
+	testConnection,
+} from '../components/ai_painting/comfyui.js';
 
 export class set extends plugin {
 	constructor() {
@@ -106,12 +111,23 @@ export class set extends plugin {
 			if (val.url == api)
 				return await e.reply(`已存在该接口:${api}  [${val.remark}]`)
 		}
-		// 检测接口连通性
-		// if (!await this.testapi(api, '绘图')) { return false }
+		let backendInfo
+		try {
+			backendInfo = await discover({ url: api }, true)
+		} catch (error) {
+			Log.e(error)
+			return e.reply(`ComfyUI接口未正确响应：${error.message}`, true)
+		}
 
 		let obj = {
 			url: api,
 			remark: remark,
+			backend: 'comfyui',
+			model: backendInfo.models[0] || '',
+			clip: backendInfo.clips[0] || '',
+			clip_type: backendInfo.clipTypes.includes('krea2') ? 'krea2' : backendInfo.clipTypes[0] || '',
+			vae: backendInfo.vaes[0] || '',
+			scheduler: backendInfo.schedulers.includes('simple') ? 'simple' : backendInfo.schedulers[0] || '',
 			account_id: '',
 			account_password: '',
 			token: ''
@@ -383,11 +399,17 @@ export class set extends plugin {
 	 * @return {*}
 	 */
 	async testapi(api, type = '') {
-		if (type == '绘图') {
-			api = api + `/sdapi/v1/txt2img`
-		}
 		this.e.reply('正在测试接口连通性，请稍候')
-		let testres = await test_api(api)
+		let testres = false
+		if (type == '绘图') {
+			try {
+				testres = await testConnection({ url: api })
+			} catch (error) {
+				Log.e(error)
+			}
+		} else {
+			testres = await test_api(api)
+		}
 		this.e.reply(testres ? `接口可用` : `接口未正确响应，您可能配置了错误的接口`, true)
 		return testres
 	}
@@ -405,14 +427,8 @@ export class set extends plugin {
 		let api = apiobj.url //接口
 		let remark = apiobj.remark //接口备注
 		try {
-			let res = await fetch(api + `/sdapi/v1/samplers`)
-			if (res.status == 404) {
-				return e.reply('拉取列表失败')
-			}
-			res = await res.json()
-			let samplerList = []
-			for (let val of res)
-				samplerList.push(val.name)
+			const res = await listSamplers(apiobj)
+			const samplerList = res.map((val) => val.name)
 			e.reply(`当前接口[${remark}]支持如下采样器：\n` + samplerList.join('\n'))
 		} catch (err) {
 			Log.e(err)

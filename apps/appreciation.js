@@ -13,6 +13,7 @@ import Config from '../components/ai_painting/config.js';
 import Log from '../utils/Log.js';
 import { parseImg } from '../utils/utils.js';
 import pic_tools from '../utils/pic_tools.js';
+import { readComfyPngInfo } from '../components/ai_painting/comfyui.js';
 
 let ap_cfg = await Config.getcfg()
 const API = ap_cfg.appreciate
@@ -62,57 +63,25 @@ export class appreciate extends plugin {
         let img = await axios.get(e.img[0], {
             responseType: 'arraybuffer'
         });
-        let base64 = Buffer.from(img.data, 'binary')
-            .toString('base64');
-        const config = await Config.getcfg();
-        const { APIList, usingAPI } = config;
-        if (APIList.length === 0) {
-            e.reply("请先配置绘图API");
-        }
-        const { url, account_id, account_password } = APIList[usingAPI - 1];
-        const headers = {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            ...(account_id && account_password && {
-                Authorization: `Basic ${Buffer.from(
-                    `${account_id}:${account_password}`
-                ).toString("base64")}`,
-            }),
-        };
-        const res = await axios.post(`${url}/sdapi/v1/png-info`, {
-            image: "data:image/png;base64," + base64,
-        }, {
-            headers
-        });
-        if (res.status === 200) {
-            if (res.data.info === "") {
-                e.reply("该图片无解析信息，请确保图片为Stable Diffusion的输出图片，并发送的是原图");
-                return false;
-            } else {
-                let data_msg = [];
-                data_msg.push({
-                    message: segment.image(e.img[0]),
-                    nickname: Bot.nickname,
-                    user_id: Bot.uin,
-                });
-                data_msg.push({
-                    message: res.data.info,
-                    nickname: Bot.nickname,
-                    user_id: Bot.uin,
-                });
-                let send_res = null;
-                if (e.isGroup)
-                    send_res = await e.reply(await e.group.makeForwardMsg(data_msg));
-                else send_res = await e.reply(await e.friend.makeForwardMsg(data_msg));
-                if (!send_res) {
-                    e.reply("消息发送失败，可能被风控~");
-                }
-                return true;
-            }
-        } else {
-            Log.e(`无法获取该图片的解析信息，后端异常：${res.status}`);
+        const info = readComfyPngInfo(Buffer.from(img.data));
+        if (!info) {
+            e.reply("该图片没有ComfyUI工作流信息，请确保发送的是未经压缩的原图");
             return false;
         }
+        const data_msg = [{
+            message: segment.image(e.img[0]),
+            nickname: Bot.nickname,
+            user_id: Bot.uin,
+        }, {
+            message: info,
+            nickname: Bot.nickname,
+            user_id: Bot.uin,
+        }];
+        const send_res = e.isGroup
+            ? await e.reply(await e.group.makeForwardMsg(data_msg))
+            : await e.reply(await e.friend.makeForwardMsg(data_msg));
+        if (!send_res) e.reply("消息发送失败，可能被风控~");
+        return true;
     }
 
     async appreciate(e) {

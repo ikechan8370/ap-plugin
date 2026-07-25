@@ -3,6 +3,7 @@ import axios from 'axios';
 import moment from 'moment';
 import pic_tools from '../utils/pic_tools.js';
 import Config from '../components/ai_painting/config.js';
+import { upscaleImage } from '../components/ai_painting/comfyui.js';
 let apcfg = await Config.getcfg()
 const api = apcfg.Real_CUGAN
 
@@ -161,38 +162,14 @@ export class SR extends plugin {
         let strength = e.msg.match(/强度([0-1](\.[0-9]{1,3})?)/);
         if (!strength) strength = 0.6;
         else strength = parseFloat(strength[1]);
-        await e.reply([`源图${res.width}x${res.height}，使用${setting.realesrgan.model1}算法与${setting.realesrgan.model2}算法，${scale}倍放大，强度${strength}，大清晰术！`], false, { recallMsg: 30, at: true });
+        await e.reply([`源图${res.width}x${res.height}，使用ComfyUI Lanczos进行${scale}倍放大`], false, { recallMsg: 30, at: true });
         let config = await Config.getcfg()
         let apiobj = config.APIList[config.usingAPI - 1]
-        let url = apiobj.url + '/sdapi/v1/extra-single-image';
-        const headers = {
-            "Content-Type": "application/json"
-        };
-        if (apiobj.account_password) {
-            headers.Authorization = `Basic ${Buffer.from(apiobj.account_id + ':' + apiobj.account_password, 'utf8').toString('base64')} `
-        }
         try {
-            const response = await axios({
-                method: 'post',
-                url: url,
-                headers: headers,
-                data: JSON.stringify({
-                    "resize_mode": 0,
-                    "show_extras_results": true,
-                    "gfpgan_visibility": 0,
-                    "codeformer_visibility": 0,
-                    "codeformer_weight": 0,
-                    "upscaling_resize": scale,
-                    "upscaling_crop": true,
-                    "upscaler_1": setting.realesrgan.model1,
-                    "upscaler_2": setting.realesrgan.model2,
-                    "extras_upscaler_2_visibility": strength,
-                    "upscale_first": false,
-                    "image": "data:image/jpeg;base64," + res.base64
-                })
-            });
-            await e.reply(segment.image(`base64://${response.data.image.replace(/data:image\/png;|base64,/g, "")}`), true)
+            const image = await upscaleImage(res.base64, scale, apiobj)
+            await e.reply(segment.image(`base64://${image}`), true)
         } catch (error) {
+            logger.error(error)
             e.reply('大清晰术失败了呢(っ °Д °;)っ', true)
         }
         return true

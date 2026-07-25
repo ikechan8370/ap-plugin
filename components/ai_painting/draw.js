@@ -9,16 +9,15 @@
  * Copyright (c) 2022 by 渔火Arcadia 1761869682@qq.com, All Rights Reserved. 
  */
 import Config from "./config.js";
-import cfg from '../../../../lib/config/config.js'
 import NsfwCheck from "./nsfwcheck.js"
 import moment from "moment";
 import path from 'path';
 import fs from 'fs';
-import fetch from "node-fetch";
 import { bs64Size } from '../../utils/utils.js';
 import Log from '../../utils/Log.js'
 import process from "process";
 import { Pictools } from "../../utils/utidx.js";
+import { generate as generateWithComfyUI } from "./comfyui.js";
 
 class Draw {
 
@@ -256,17 +255,8 @@ class Draw {
     }
 }
 async function i(paramdata, apiobj) {
-    const PLUGINPATH = `${process.cwd()}/plugins/ap-plugin`, READMEPATH = `${PLUGINPATH}/README.md`;
-    try {
-        var currentVersion = /版本：(.*)/.exec(fs.readFileSync(READMEPATH, 'utf8'))[1];
-    } catch (err) {}
     const options = await constructRequestOption(paramdata.param, apiobj);
-    if (apiobj.account_password) {
-      options.headers['Authorization'] = `Basic ${Buffer.from(`${apiobj.account_id}:${apiobj.account_password}`, 'utf8').toString('base64')}`;
-    }
-    options.headers['User-Agent'] = `AP-Plugin/@${currentVersion}`;
-    options.headers['Caller'] = `Master:${cfg.masterQQ[0].toString()}|Bot:${Bot.uin.toString()}|User:${paramdata.user.toString()}`;
-    return fetch(`${apiobj.url}/sdapi/v1/${paramdata.param.base64 ? "img" : "txt"}2img`, options);
+    return generateWithComfyUI(JSON.parse(options.body), apiobj);
   }
   
 async function constructRequestOption(param, apiobj) {
@@ -313,38 +303,6 @@ async function constructRequestOption(param, apiobj) {
     if (seed == -1) {
         seed = Math.floor(Math.random() * 2147483647)
     }
-    // 请求接口判断是否存在指定sampler 
-    if (param.sampler != 'Euler a') {
-        const PLUGINPATH = `${process.cwd()}/plugins/ap-plugin`, READMEPATH = `${PLUGINPATH}/README.md`;
-        try {
-            var currentVersion = /版本：(.*)/.exec(fs.readFileSync(READMEPATH, 'utf8'))[1];
-        } catch (err) {}
-        try {
-            let res = await fetch(apiobj.url + `/sdapi/v1/samplers`, {
-                headers: {
-                    'User-Agent': 'AP-Plugin/@' + currentVersion,
-                    'Authorization': `Basic ${Buffer.from(`${apiobj.account_id}:${apiobj.account_password}`, 'utf8').toString('base64')}`,
-                }
-            })
-            res = await res.json()
-            let exist = false
-            for (let val of res) {
-                if (val.name == param.sampler) {
-                    exist = true
-                    break
-                }
-            }
-            Log.i(`指定的采样器${param.sampler}：${exist ? '存在' : '不存在'}`)
-            if (!exist) {
-                param.sampler = 'Euler a'
-                Log.i(`接口不存在该采样器，默认使用Euler a`)
-                }
-        } catch (err) {
-            param.sampler = 'Euler a'
-            Log.i(`采样器列表请求出错，默认使用Euler a`)
-        }
-    }
-
     let setting = await Config.getSetting()
 
     let data;

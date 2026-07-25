@@ -1,5 +1,7 @@
 import plugin from "../../../lib/plugins/plugin.js";
+import axios from "axios";
 import Config from "../components/ai_painting/config.js";
+import { listUpscalers } from "../components/ai_painting/comfyui.js";
 
 const _path = process.cwd();
 
@@ -253,37 +255,12 @@ export class setSetting extends plugin {
   async setSuperResolutionModel(e) {
     const config = await Config.getcfg();
     const apiobj = config.APIList[config.usingAPI - 1];
-    const url = apiobj.url + "/sdapi/v1/upscalers";
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    if (apiobj.account_password) {
-      headers.Authorization = `Basic ${Buffer.from(
-        apiobj.account_id + ":" + apiobj.account_password,
-        "utf8",
-      ).toString("base64")} `;
-      headers.User_Agent = "AP-Plugin";
-    }
-    let modelList;
+    let modelList = [];
     try {
-      const response = await axios.get(url, { headers });
-      for (let i = 0; i < response.data.length; i++) {
-        modelList.push(response.data[i].name);
-      }
+      modelList = (await listUpscalers(apiobj)).map((item) => item.name);
+      if (!modelList.length) modelList = ["Lanczos"];
     } catch (error) {
-      modelList = [
-        "None",
-        "Lanczos",
-        "Nearest",
-        "BSRGAN",
-        "ESRGAN_4x",
-        "LDSR",
-        "R-ESRGAN 4x+",
-        "R-ESRGAN 4x+ Anime6B",
-        "ScuNET",
-        "ScuNET PSNR",
-        "SwinIR_4x",
-      ];
+      modelList = ["Lanczos"];
     }
     const setting = await Config.getSetting();
     const superResolutionModel = e.msg

@@ -8,6 +8,13 @@
  * 
  * Copyright (c) 2022 by 渔火Arcadia 1761869682@qq.com, All Rights Reserved. 
 -->
+# ComfyUI 后端改造
+
+* 将 A1111 `/sdapi/v1/*` 调用替换为 ComfyUI 原生工作流、图片上传、队列与中止接口
+* 内置 Krea 2 文生图和图生图工作流，支持参数映射和 LoRA 管理逻辑
+* 模型、VAE、LoRA、采样器、接口状态与模型切换改用 ComfyUI 能力发现
+* 图片解析改为读取 ComfyUI PNG 元数据，清晰术改用 ComfyUI 缩放工作流
+
 # 3.0.0
 * 推送至main
 
